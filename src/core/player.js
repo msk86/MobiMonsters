@@ -1,13 +1,17 @@
 module.exports = (function() {
     function Player(name) {
         this.name = name;
-        this.ready = false;
+        this.isReady = false;
     }
+
+    Player.prototype.ready = function() {
+        this.isReady = !this.isReady;
+    };
 
     Player.prototype.toJson = function() {
         return {
             name: this.name,
-            ready: this.ready
+            ready: this.isReady
         };
     };
 

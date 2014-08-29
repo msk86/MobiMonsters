@@ -1,4 +1,5 @@
-var app = require('express')();
+var express = require('express');
+var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var _ = require('underscore');
@@ -18,14 +19,22 @@ app.get('/', function(req, res){
 io.on('connection', function(socket){
     var session = {};
 
+    io.emit('room-updated', _.map(app.context.rooms.rooms, function(r){return r.toJson();}));
+
     socket.on('disconnect', function(){
         if(session.room) {
-            io.to(session.room.id).emit("errors", session.player.name + ' dropped.');
+            session.room.removePlayer(session.player);
+            app.context.rooms.clean();
+
+            roomPlayerDropped(session.room, session.player);
+            playerUpdated(session.room.id, session.room);
+            roomUpdated(app.context.rooms.rooms);
         }
     });
 
     socket.on('login', function(name) {
         session.player = new Player(name);
+        socket.emit('logined', session.player.toJson());
     });
 
     socket.on('create-room', function(){
@@ -33,8 +42,10 @@ io.on('connection', function(socket){
         c.createRoom(function(err, room) {
             if(err) {return socket.emit('errors', err);}
             socket.join(room.id);
-            io.emit('room-created', room.toJson());
-            io.to(room.id).emit('room-joined', room.toJson());
+
+            roomUpdated(app.context.rooms.rooms);
+            roomJoined(room);
+            playerUpdated(room.id, room);
         });
     });
 
@@ -43,15 +54,19 @@ io.on('connection', function(socket){
         c.joinRoom(roomId, function(err, room) {
             if(err) {return socket.emit('errors', err);}
             socket.join(room.id);
-            io.to(room.id).emit('room-joined', room.toJson());
+
+            roomUpdated(app.context.rooms.rooms);
+            roomJoined(room);
+            playerUpdated(room.id, room);
         });
     });
 
-    socket.on('ready', function() {
+    socket.on('player-ready', function() {
         var c = new RoomController(app, session);
         c.ready(function(err, player) {
             if(err) {return socket.emit('errors', err);}
-            io.to(session.room.id).emit('player-ready', player.toJson());
+
+            playerUpdated(session.room.id, session.room);
         });
     });
 
@@ -59,9 +74,26 @@ io.on('connection', function(socket){
         var c = new RoomController(app, session);
         var start = c.fight(function(err, room) {
             if(err) {return socket.emit('errors', err);}
+
+            roomUpdated(app.context.rooms.rooms);
             io.to(session.room.id).emit('fight-start');
         });
     });
+
+    function roomPlayerDropped(room, player) {
+        io.to(room.id).emit("errors", player.name + ' dropped.');
+    }
+
+    function roomJoined(room) {
+        io.to(room.id).emit('room-joined', room.toJson());
+    }
+
+    function playerUpdated(roomId, room) {
+        io.to(roomId).emit('room-player-updated', room.toJson());
+    }
+    function roomUpdated(rooms) {
+        io.emit('room-updated', _.map(rooms, function(r){return r.toJson();}));
+    }
 });
 
 http.listen(3000, function(){

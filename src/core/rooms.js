@@ -18,5 +18,11 @@ module.exports = (function() {
         return _.find(this.rooms, function(r) {return r.id == id});
     };
 
+    Rooms.prototype.clean = function() {
+        this.rooms = _.filter(this.rooms, function(r) {
+            return r.players != 0;
+        });
+    };
+
     return Rooms;
 })();

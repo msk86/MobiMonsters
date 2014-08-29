@@ -9,6 +9,7 @@ module.exports = (function() {
 
     RoomController.prototype.createRoom = function(cb) {
         if(!this.session.player) { return cb('You are not login.');}
+        if(this.session.player.room) {return cb('You are already in a room.')}
 
         var room = this.app.context.rooms.nextRoom();
         this.session.room = room;
@@ -24,6 +25,7 @@ module.exports = (function() {
         if(!room) {return cb('No room found.');}
 
         this.session.room = room;
+        if(room.players.length >= 2) {return cb('Room size limit.');}
         room.addPlayer(this.session.player);
         cb(null, room);
     };
@@ -32,7 +34,7 @@ module.exports = (function() {
         if(!this.session.player) { return cb('You are not login.');}
         if(!this.session.room) { return cb('You are not in a room.');}
 
-        this.session.player.ready = true;
+        this.session.player.ready();
         cb(null, this.session.player);
     };
 
@@ -42,7 +44,7 @@ module.exports = (function() {
 
         if(this.session.room.owner != this.session.player) { return cb('You are not the owner.');}
 
-        if(!_.every(this.session.room.players, function(p) {return p.ready;})) {return cb('Not all players are ready.');}
+        if(!_.every(this.session.room.players, function(p) {return p.isReady;})) {return cb('Not all players are ready.');}
 
         this.session.room.status = Room.FIGHTING;
         cb(null, this.session.room);

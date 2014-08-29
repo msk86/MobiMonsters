@@ -2,49 +2,108 @@
 <html>
 <head>
     <title>Socket.IO chat</title>
+    <style type="text/css">
+        ul#room-list li {
+            display: inline-block;
+            border: 2px solid;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #room {
+            display: none;
+        }
+
+        ul#player-list li {
+            margin: 5px;
+        }
+
+        ul#player-list li .ready {
+            color: #ffd700;
+        }
+
+    </style>
 </head>
 <body>
-<ul id="messages"></ul>
-<form action="">
-    <select id="t">
-        <option value="login">Login</option>
-        <option value="create-room">Create Room</option>
-        <option value="join-room">Join Room</option>
-        <option value="ready">Ready</option>
-        <option value="fight">Fight</option>
-    </select>
-    <input id="m" autocomplete="off"/>
-    <button>Send</button>
-</form>
+
+<div id="index">
+    <div id="login">
+        <form id="login-form" action="">
+            <input id="name" autocomplete="off"/>
+            <button>Login</button>
+        </form>
+    </div>
+    <ul id="room-list"></ul>
+    <button id="create-room">CreateRoom</button>
+</div>
+<div id="room">
+    <ul id="player-list"></ul>
+    <button id="ready">Ready</button>
+    <button id="fight">Fight</button>
+</div>
+
 
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 <script>
     var socket = io();
-    $('form').submit(function () {
-        socket.emit($('#t').val(), $('#m').val());
-        $('#t').val('');
-        $('#m').val('');
+
+    $('#login-form').submit(function () {
+        socket.emit('login', $('#name').val());
+        $('#name').val('');
         return false;
     });
 
-    socket.on('room-joined', function (room) {
-        console.log('room-joined:');
-        console.log(room)
+    socket.on('logined', function(player) {
+        $('#login').html('Welcome, ' + player.name);
     });
 
-    socket.on('room-created', function (room) {
-        console.log('room-created:');
-        console.log(room)
+    $('#create-room').click(function() {
+        socket.emit('create-room');
     });
-    socket.on('player-ready', function (player) {
-        console.log('player-ready');
-        console.log(player)
+
+    $('#room-list').on('click', 'li', function() {
+        socket.emit('join-room', $(this).attr('room-id'));
     });
+
+    socket.on('room-updated', function (rooms) {
+        var roomStr = '';
+        $.each(rooms, function(i, room) {
+            roomStr += '<li room-id="'+room.id+'"><div>'+room.id+'</div><div>'+(room.players.length)+'/2</div><div>'+room.status+'</div></li>';
+        });
+        $('#room-list').html(roomStr);
+    });
+
+    socket.on('room-joined', function (room) {
+        $('#index').hide();
+        $('#room').show();
+    });
+
+    socket.on('room-player-updated', function (room) {
+        var playerStr = '';
+        $.each(room.players, function(i, player) {
+            playerStr += '<li name="'+player.name+'">'+player.name + readyHtml(player.ready) +'</li>'
+        });
+        $('#room #player-list').html(playerStr);
+
+        function readyHtml(ready) {
+            return ready ? '<span class="ready">(Ready)</span>' : '';
+        }
+    });
+
+    $('#ready').click(function() {
+        socket.emit('player-ready');
+    });
+
+    $('#fight').click(function() {
+        socket.emit('fight');
+    });
+
     socket.on('fight-start', function () {
         console.log('fight-start');
     });
+
     socket.on('errors', function (msg) {
         console.error("error: " + msg);
     });

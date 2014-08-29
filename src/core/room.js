@@ -17,10 +17,16 @@ module.exports = (function() {
         player.room = this;
     };
 
+    Room.prototype.removePlayer = function(player) {
+        player.room = null;
+        this.players = _.filter(this.players, function(p) {return p != player});
+    };
+
     Room.prototype.toJson = function() {
         return {
             id: this.id,
-            players:_.map(this.players, function(p) {return p.toJson()})
+            players:_.map(this.players, function(p) {return p.toJson()}),
+            status: this.status == Room.STATUS.WAITING ? 'Waiting' : 'Fighting'
         };
     };
 
