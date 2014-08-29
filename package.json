@@ -1,0 +1,12 @@
+{
+    "name": "MobiMonsters",
+    "version": "0.0.1",
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:msk86/MobiMonsters.git"
+    },
+    "dependencies": {
+        "express": "*",
+        "socket.io": "*"
+    }
+}
