@@ -19,9 +19,8 @@ io.on('connection', function(socket){
     var session = {};
 
     socket.on('disconnect', function(){
-        var playerRoom = app.context.rooms.findRoom().byPlayer(session.player);
-        if(playerRoom) {
-            io.to(playerRoom.id).emit("error", session.player.name + ' dropped.');
+        if(session.player.room) {
+            io.to(session.player.room.id).emit("error", session.player.name + ' dropped.');
         }
     });
 
@@ -30,18 +29,18 @@ io.on('connection', function(socket){
     });
 
     socket.on('create-room', function(){
-        if(!session.player) { return io.emit('error', 'not login');}
+        if(!session.player) { return socket.emit('error', 'not login');}
         var c = new RoomController(app, session);
         var r = c.createRoom();
-        io.emit('room-created', r);
+        io.emit('room-created', r.toJson());
     });
 
     socket.on('join-room', function(roomId){
-        if(!session.player) { return io.emit('error', 'not login');}
+        if(!session.player) { return socket.emit('error', 'not login');}
         var c = new RoomController(app, session);
         var r = c.joinRoom(roomId);
         socket.join(r.id);
-        io.to(r.id).emit('room-joined', r);
+        io.to(r.id).emit('room-joined', r.toJson());
     });
 });
 

@@ -9,7 +9,7 @@ module.exports = (function() {
     };
 
     RoomController.prototype.joinRoom = function(roomId) {
-        var room = this.app.context.rooms.findRoom().byId(roomId);
+        var room = this.app.context.rooms.findRoom(roomId);
         room.addPlayer(this.session.player);
         return room;
     };

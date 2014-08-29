@@ -3,5 +3,9 @@ module.exports = (function() {
         this.name = name;
     }
 
+    Player.prototype.toJson = function() {
+        return {name: this.name};
+    };
+
     return Player;
 })();

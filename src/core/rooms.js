@@ -1,5 +1,4 @@
 module.exports = (function() {
-
     var Room = require('./room.js');
     var _ = require('underscore');
 
@@ -17,24 +16,6 @@ module.exports = (function() {
 
     Rooms.prototype.findRoom = function(id) {
         return _.find(this.rooms, function(r) {return r.id == id});
-    };
-
-    Rooms.prototype.findRoom = function() {
-        var self = this;
-        return {
-            byId : function(id) {
-                return _.find(self.rooms, function(r) {
-                    return r.id == id}
-                );
-            },
-            byPlayer: function(player) {
-                return _.find(self.rooms, function(r) {
-                    return _.find(r.players, function(p) {
-                        return p == player;
-                    });
-                });
-            }
-        };
     };
 
     return Rooms;
