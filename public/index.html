@@ -14,6 +14,10 @@
             display: none;
         }
 
+        #game-panel {
+            display: none;
+        }
+
         ul#player-list li {
             margin: 5px;
         }
@@ -42,6 +46,9 @@
     <button id="fight">Fight</button>
 </div>
 
+<div id="game-panel">
+
+</div>
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -78,6 +85,7 @@
     socket.on('room-joined', function (room) {
         $('#index').hide();
         $('#room').show();
+        $('#game-panel').hide();
     });
 
     socket.on('room-player-updated', function (room) {
@@ -101,7 +109,10 @@
     });
 
     socket.on('fight-start', function () {
-        console.log('fight-start');
+        $('#index').hide();
+        $('#room').hide();
+        $('#game-panel').show();
+        $('#game-panel').load('/game.html');
     });
 
     socket.on('errors', function (msg) {
