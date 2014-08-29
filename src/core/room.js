@@ -4,7 +4,13 @@ module.exports = (function() {
     function Room(id) {
         this.id = id;
         this.players = [];
+        this.status = Room.STATUS.WAITING;
     }
+
+    Room.STATUS = {
+        WAITING : 1,
+        FIGHTING : 2
+    };
 
     Room.prototype.addPlayer = function(player) {
         this.players.push(player);

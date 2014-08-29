@@ -6,8 +6,15 @@
 <body>
 <ul id="messages"></ul>
 <form action="">
-    <input id="t" autocomplete="off" />
-    <input id="m" autocomplete="off" /><button>Send</button>
+    <select id="t">
+        <option value="login">Login</option>
+        <option value="create-room">Create Room</option>
+        <option value="join-room">Join Room</option>
+        <option value="ready">Ready</option>
+        <option value="fight">Fight</option>
+    </select>
+    <input id="m" autocomplete="off"/>
+    <button>Send</button>
 </form>
 
 
@@ -15,16 +22,32 @@
 <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 <script>
     var socket = io();
-    $('form').submit(function(){
+    $('form').submit(function () {
         socket.emit($('#t').val(), $('#m').val());
         $('#t').val('');
         $('#m').val('');
         return false;
     });
 
-    socket.on('room-joined', function(rooms){console.log(rooms)});
-    socket.on('room-created', function(room){console.log(room)});
-    socket.on('error', function(msg) {console.log(msg)});
+    socket.on('room-joined', function (room) {
+        console.log('room-joined:');
+        console.log(room)
+    });
+
+    socket.on('room-created', function (room) {
+        console.log('room-created:');
+        console.log(room)
+    });
+    socket.on('player-ready', function (player) {
+        console.log('player-ready');
+        console.log(player)
+    });
+    socket.on('fight-start', function () {
+        console.log('fight-start');
+    });
+    socket.on('errors', function (msg) {
+        console.error("error: " + msg);
+    });
 </script>
 </body>
 </html>
