@@ -10,6 +10,7 @@ var _ = require('underscore');
 var Rooms = require('./core/rooms.js');
 Player = require('./core/player.js');
 RoomController = require('./controller/room-controller.js');
+FightController = require('./controller/fight-controller.js');
 
 app.context = {};
 app.context.rooms = new Rooms();
@@ -70,11 +71,22 @@ io.on('connection', function(socket){
 
     socket.on('fight', function() {
         var c = new RoomController(app, session);
-        var start = c.fight(function(err, room) {
+        c.fight(function(err, room) {
             if(err) {return socket.emit('errors', err);}
 
             roomUpdated(app.context.rooms.rooms);
             io.to(session.room.id).emit('fight-start');
+        });
+    });
+
+    socket.on('command', function(commands) {
+        var c = new FightController(app, session);
+        c.newCommand(commands, function(err, rival) {
+            if(rival.commands) {
+                c.roundFight(rival, function(err, results) {
+                    io.to(session.room.id).emit('result', results);
+                });
+            }
         });
     });
 

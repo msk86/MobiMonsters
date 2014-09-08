@@ -22,6 +22,10 @@ module.exports = (function() {
         this.players = _.filter(this.players, function(p) {return p != player});
     };
 
+    Room.prototype.getRival = function(player) {
+        return _.find(this.players, function(p) { return p != player;});
+    };
+
     Room.prototype.toJson = function() {
         return {
             id: this.id,

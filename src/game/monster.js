@@ -4,6 +4,7 @@ module.exports = (function() {
         this.maxHp = 100;
         this.hp = this.maxHp;
         this.atk = 20;
+        this.commandStatus = null;
     }
 
     return Monster;

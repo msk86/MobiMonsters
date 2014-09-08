@@ -1,0 +1,279 @@
+<!doctype html>
+<html>
+<head>
+    <title>MobiMonsters</title>
+    <style type="text/css">
+        ul#room-list li {
+            display: inline-block;
+            border: 2px solid;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #room-list-panel {
+            display: none;
+        }
+
+        #room {
+            display: none;
+        }
+
+        #game-panel {
+            display: none;
+        }
+
+        ul#player-list li {
+            margin: 5px;
+        }
+
+        ul#player-list li .ready {
+            color: #ffd700;
+        }
+
+        #game-panel .monster {
+            margin: 20px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        #game-panel .btn {
+            margin: 10px;
+            cursor: pointer;
+            border: 1px solid;
+            border-radius: 2px;
+        }
+
+        .commands {
+            height: 100px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="index">
+    <div id="login">
+        <form id="login-form" action="">
+            <input id="name" autocomplete="off"/>
+            <button>Login</button>
+        </form>
+    </div>
+    <div id="room-list-panel">
+        <ul id="room-list"></ul>
+        <form id="room-form" action="">
+            <input id="title" autocomplete="off"/>
+            <button>CreateRoom</button>
+        </form>
+    </div>
+</div>
+<div id="room">
+    <ul id="player-list"></ul>
+    <button id="ready">Ready</button>
+    <button id="fight">Fight</button>
+</div>
+
+<div id="game-panel">
+    <div id="my-monster" class="monster">
+        <div class="monster-name"></div>
+        <div><span>ATK: </span><span class="monster-atk"></span></div>
+        <div><span>HP: </span><span class="monster-hp"></span></div>
+        <div><span>EN: </span><span class="monster-en"></span><span class="monster-en-cost"></span></div>
+        <div class="commands"></div>
+    </div>
+    <div id="rival-monster" class="monster">
+        <div></div>
+        <div class="monster-name"></div>
+        <div><span>ATK: </span><span class="monster-atk"></span></div>
+        <div><span>HP: </span><span class="monster-hp"></span></div>
+        <div><span>EN: </span><span class="monster-en"></span></div>
+        <div class="commands"></div>
+    </div>
+    <div class="control">
+    </div>
+    <div class="confirm">
+        <span class="btn submit">提交</span>
+        <span class="btn reset">重置</span>
+    </div>
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+<script src="http://underscorejs.org/underscore.js"></script>
+<script>
+    var socket = io();
+
+    var user = null;
+
+    var commandList = [{code: 1, costValue: 10, text:'前进'},
+        {code: 2, costValue: 10, text:'后退'},{code: 3, costValue: 15, text:'攻击'},
+        {code: 4, costValue: 10, text:'防御'},{code: 5, costValue: 15, text:'闪避'},
+        {code: 6, costValue: 10, text:'聚能'},{code: 0, costValue: 0, text:'PASS'}
+    ];
+
+    var myCommands = [];
+
+    $('#login-form').submit(function () {
+        socket.emit('login', $('#name').val());
+        $('#name').val('');
+        return false;
+    });
+
+    socket.on('logined', function(u) {
+        $('#login').html('Welcome, ' + u.name);
+        $('#room-list-panel').show();
+        user = u;
+    });
+
+    $('#room-form').submit(function() {
+        socket.emit('create-room', $('#title').val());
+        return false;
+    });
+
+    $('#room-list').on('click', 'li', function() {
+        socket.emit('join-room', $(this).attr('room-id'));
+    });
+
+    socket.on('room-updated', function (rooms) {
+        var roomStr = '';
+        $.each(rooms, function(i, room) {
+            roomStr += '<li room-id="'+room.id+'"><div>'+room.title+'</div><div>'+(room.users.length)+'/2</div><div>'+room.status+'</div></li>';
+        });
+        $('#room-list').html(roomStr);
+    });
+
+    socket.on('room-joined', function (room) {
+        $('#index').hide();
+        $('#room').show();
+        $('#game-panel').hide();
+    });
+
+    socket.on('room-user-updated', function (room) {
+        var userStr = '';
+        $.each(room.users, function(i, user) {
+            userStr += '<li name="'+user.name+'">'+user.name + readyHtml(room.ready[user.id]) +'</li>'
+        });
+        $('#room #player-list').html(userStr);
+
+        function readyHtml(ready) {
+            return ready ? '<span class="ready">(Ready)</span>' : '';
+        }
+    });
+
+    $('#ready').click(function() {
+        socket.emit('user-ready');
+    });
+
+    $('#fight').click(function() {
+        socket.emit('user-start');
+    });
+
+    socket.on('play-start', function () {
+        $('#index').hide();
+        $('#room').hide();
+        $('#game-panel').show();
+    });
+
+    socket.on('game-updated', function(game) {
+        myCommands = [];
+        showCommand($('#my-monster'), myCommands);
+        renderBtn(myCommands);
+
+        _.each(game.battleField.monsters, function(m) {
+            if(isMyMonster(game, m)) {
+                showMonster($('#my-monster'), m);
+            } else {
+                showMonster($('#rival-monster'), m);
+            }
+        });
+    });
+
+    $(function(){
+        renderBtn([]);
+    });
+
+    function renderBtn(commands) {
+        $('.control').html('');
+        $.each(commandList, function(i, c) {
+            var rate = costRate(commands, c);
+            $('.control').append('<span class="btn" value="'+ c.code+'">'+ c.text+'<label>('+ c.costValue* rate+')</label></span>');
+        });
+    }
+
+    function costRate(commands, command) {
+        var sameCodeCount = _.filter(commands, function (c) {
+            return c.code == command.code;
+        }).length;
+        return Math.pow(2, sameCodeCount);
+    }
+
+
+    $('.control').on('click', '.btn', function() {
+        if(myCommands.length >= 4) {
+            return;
+        }
+        var code = +$(this).attr('value');
+        var command = _.clone(_.find(commandList, function(c) {
+            return c.code == code;
+        }));
+
+        var rate = costRate(myCommands, command);
+        command.costValue *= rate;
+
+        myCommands.push(command);
+
+        showCommand($('#my-monster'), myCommands);
+        renderBtn(myCommands);
+    });
+
+    function isMyMonster(game, monster) {
+        var owner = _.find(game.characters, function(c) {
+            return c.id == monster.ownerId;
+        });
+
+        return owner.userId == user.id;
+    }
+
+    function showMonster(el, monster) {
+        el.find('.monster-name').html(monster.name);
+        el.find('.monster-atk').html(monster.atk);
+        el.find('.monster-en').html(monster.energy);
+        el.find('.monster-hp').html(monster.hp + '/' + monster.maxHp);
+    }
+
+    function showCommand(el, commands) {
+        var commandEl = el.find('.commands');
+        commandEl.html('');
+        _.each(commands, function(command){
+            commandEl.append('<div>'+command.text+'</div>');
+        });
+
+        var totalCost = _.reduce(commands, function(r, c) {
+            return r + c.costValue;
+        }, 0);
+
+        if(totalCost != 0) {
+            el.find('.monster-en-cost').html('-' + totalCost);
+        } else {
+            el.find('.monster-en-cost').html('');
+        }
+    }
+
+    socket.on('errors', function (msg) {
+        console.error("error: " + msg);
+    });
+
+    $('.confirm .submit').click(function() {
+        if(myCommands.length == 4) {
+            socket.emit('commands', _.map(myCommands, function(c) {return c.code;}));
+        }
+    });
+
+    $('.confirm .reset').click(function() {
+        myCommands = [];
+        showCommand($('#my-monster'), myCommands);
+        renderBtn(myCommands);
+    });
+
+</script>
+</body>
+</html>

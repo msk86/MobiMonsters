@@ -1,6 +1,8 @@
 module.exports = (function() {
     var _ = require('underscore');
     var Room = require('../core/room.js');
+    var BattleField = require('../game/battle-field.js');
+    var Monster = require('../game/monster.js');
 
     function RoomController(app, session) {
         this.app = app;
@@ -47,6 +49,8 @@ module.exports = (function() {
         if(!_.every(this.session.room.players, function(p) {return p.isReady;})) {return cb('Not all players are ready.');}
 
         this.session.room.status = Room.FIGHTING;
+        this.session.room.battleField = new BattleField();
+        this.session.player.currentMonster = new Monster(this.session.player.name);
         cb(null, this.session.room);
     };
 
